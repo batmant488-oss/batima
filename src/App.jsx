@@ -69,7 +69,14 @@ function App() {
   return (
     <BrowserRouter>
       <div className="app-shell">
-        {session && <Navigation onLogout={handleLogout} onToggleTheme={toggleTheme} darkMode={darkMode} />}
+        {session && (
+          <Navigation
+            session={session}
+            onLogout={handleLogout}
+            onToggleTheme={toggleTheme}
+            darkMode={darkMode}
+          />
+        )}
         <Routes>
           <Route path="/auth" element={!session ? <Auth /> : <Navigate to="/" replace />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

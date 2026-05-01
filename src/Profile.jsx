@@ -4,6 +4,11 @@ import { supabase } from './supabaseClient'
 export default function Profile({ session }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const profilePhoto =
+    session.user.user_metadata?.avatar_url ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      profile?.full_name || session.user.email
+    )}&background=2563eb&color=ffffff`
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -35,6 +40,9 @@ export default function Profile({ session }) {
         ) : (
           <>
             <p className="page-lead">Vous pouvez modifier vos informations et changer votre mot de passe depuis la page Paramètres.</p>
+            <div className="profile-photo-wrap">
+              <img src={profilePhoto} alt="Photo de profil" className="profile-photo" />
+            </div>
             <div className="profile-grid">
               <div>
                 <strong>Nom</strong>
