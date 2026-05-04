@@ -4,10 +4,12 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { ArrowRight, Building2, CheckCircle, Lock, Mail } from "lucide-react"
+import { ArrowRight, Building2, CheckCircle, Lock, Mail, ShieldAlert, User, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
+import { supabase } from "@/lib/supabase"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -15,6 +17,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false)
+  const [adminPin, setAdminPin] = useState("")
+  const [adminPinError, setAdminPinError] = useState(false)
+
+  const ADMIN_PIN = "admin2024"
 
   const completeLogin = (role: "Admin" | "Resident") => {
     document.cookie = `mockRole=${role}; path=/`
@@ -39,11 +46,24 @@ export default function LoginPage() {
       return
     }
 
-    window.setTimeout(() => {
-      const role = email.toLowerCase().includes("admin") ? "Admin" : "Resident"
-      completeLogin(role)
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      toast({
+        title: "Sign in failed",
+        description: error.message,
+        variant: "destructive",
+      })
       setLoading(false)
-    }, 900)
+      return
+    }
+
+    const role = email.toLowerCase().includes("admin") ? "Admin" : "Resident"
+    completeLogin(role)
+    setLoading(false)
   }
 
   const handleDemoLogin = (role: "Admin" | "Resident") => {
@@ -60,6 +80,21 @@ export default function LoginPage() {
       completeLogin(role)
       setLoading(false)
     }, 800)
+  }
+
+  const handleAdminClick = () => {
+    setAdminPin("")
+    setAdminPinError(false)
+    setAdminDialogOpen(true)
+  }
+
+  const handleAdminPinSubmit = () => {
+    if (adminPin === ADMIN_PIN) {
+      setAdminDialogOpen(false)
+      handleDemoLogin("Admin")
+    } else {
+      setAdminPinError(true)
+    }
   }
 
   return (
@@ -204,27 +239,23 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <Button
+                <div className="mt-6">
+                  {/* Admin Demo Only */}
+                  <button
                     type="button"
-                    variant="outline"
                     disabled={loading}
-                    onClick={() => handleDemoLogin("Resident")}
-                    className="h-12 rounded-xl border-white/10 bg-white/5 text-white font-semibold shadow-sm transition-all hover:border-primary/50 hover:bg-primary/10"
+                    onClick={handleAdminClick}
+                    className="group w-full flex items-center gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-left transition-all hover:bg-amber-500/10 hover:border-amber-500/40 disabled:opacity-50"
                   >
-                    <CheckCircle className="mr-2 h-4 w-4 text-primary" />
-                    Resident
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={loading}
-                    onClick={() => handleDemoLogin("Admin")}
-                    className="h-12 rounded-xl border-white/10 bg-white/5 text-white font-semibold shadow-sm transition-all hover:border-primary/50 hover:bg-primary/10"
-                  >
-                    <Lock className="mr-2 h-4 w-4 text-primary" />
-                    Admin
-                  </Button>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15 border border-amber-500/30">
+                      <ShieldAlert className="h-5 w-5 text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-amber-300 text-sm">Admin Access</p>
+                      <p className="text-xs text-amber-400/50">Requires administrator PIN</p>
+                    </div>
+                    <Lock className="h-4 w-4 text-amber-500/60 shrink-0" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -238,6 +269,43 @@ export default function LoginPage() {
           </motion.div>
         </section>
       </div>
+
+      {/* Admin PIN Dialog */}
+      <Dialog open={adminDialogOpen} onOpenChange={(open) => { setAdminDialogOpen(open); if (!open) { setAdminPin(""); setAdminPinError(false) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-amber-400" />
+              <span>Admin Access — Enter PIN</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-white/50">This area is restricted to administrators. Enter the admin PIN to continue.</p>
+            <Input
+              type="password"
+              placeholder="Enter admin PIN"
+              value={adminPin}
+              onChange={e => { setAdminPin(e.target.value); setAdminPinError(false) }}
+              onKeyDown={e => e.key === "Enter" && handleAdminPinSubmit()}
+              className="h-12 text-base tracking-widest"
+              autoFocus
+            />
+            {adminPinError && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                Incorrect PIN. Please try again.
+              </div>
+            )}
+            <Button
+              onClick={handleAdminPinSubmit}
+              className="w-full h-11 bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:bg-amber-500/30 font-semibold"
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              Unlock Admin Dashboard
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,326 +1,402 @@
 "use client"
 
-import { useState } from "react"
-import { motion } from "framer-motion"
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Wrench, Calendar, Clock, AlertTriangle, CheckCircle, Building2, X, ArrowLeft } from "lucide-react"
+import { Wrench, Calendar, Clock, AlertTriangle, CheckCircle, Building2, X, ArrowLeft, Plus, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/components/ui/use-toast"
+import { supabase } from "@/lib/supabase"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
-const maintenanceRequests = [
-  { id: "m1", title: "Leaking Faucet in Kitchen", description: "Kitchen sink faucet has been leaking for 2 days. Water is dripping constantly.", status: "In Progress", priority: "Medium", date: "2024-04-18T10:00:00Z", unit: "A-101", notes: "Technician assigned. Parts ordered." },
-  { id: "m2", title: "AC Unit Output is Weak", description: "Air conditioning unit is not cooling properly. Output is significantly weaker than usual.", status: "Resolved", priority: "Low", date: "2024-04-10T12:00:00Z", unit: "B-205", notes: "Refrigerant topped up. Working normally." },
-  { id: "m3", title: "Broken Window Seal", description: "Window seal in bedroom is broken, causing drafts and energy loss.", status: "Pending", priority: "High", date: "2024-04-15T08:30:00Z", unit: "A-304", notes: "" },
-  { id: "m4", title: "Electrical Outlet Not Working", description: "Multiple outlets in living room are not functioning. Need urgent inspection.", status: "In Progress", priority: "High", date: "2024-04-16T14:00:00Z", unit: "C-102", notes: "Electrician scheduled for tomorrow." },
-  { id: "m5", title: "Door Handle Loose", description: "Front door handle is loose and difficult to operate. Security concern.", status: "Pending", priority: "Medium", date: "2024-04-17T09:00:00Z", unit: "A-201", notes: "" }
-]
+interface MaintenanceRequest {
+  id: string
+  title: string
+  description: string
+  status: string
+  priority: string
+  unit: string
+  created_at: string
+  notes?: string
+}
 
 const statuses = ["All", "Pending", "In Progress", "Resolved"]
 const priorities = ["All", "High", "Medium", "Low"]
 
 export default function MaintenancePage() {
+  const { toast } = useToast()
+  const [requests, setRequests] = useState<MaintenanceRequest[]>([])
+  const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState("All")
   const [priorityFilter, setPriorityFilter] = useState("All")
-  const [selectedRequest, setSelectedRequest] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [editNotes, setEditNotes] = useState("")
-  const [editStatus, setEditStatus] = useState("")
+  const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null)
+  const [isNewRequestOpen, setIsNewRequestOpen] = useState(false)
+  
+  // New Request Form
+  const [newRequest, setNewRequest] = useState({
+    title: "",
+    description: "",
+    priority: "Medium",
+    unit: ""
+  })
 
-  const filteredRequests = maintenanceRequests.filter(request => {
-    const matchesStatus = statusFilter === "All" || request.status === statusFilter
-    const matchesPriority = priorityFilter === "All" || request.priority === priorityFilter
+  useEffect(() => {
+    fetchRequests()
+  }, [])
+
+  const fetchRequests = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('maintenance_requests')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (data) setRequests(data)
+    setLoading(false)
+  }
+
+  const handleCreateRequest = async () => {
+    if (!newRequest.title || !newRequest.unit) {
+      toast({ title: "Error", description: "Title and Unit are required.", variant: "destructive" })
+      return
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { error } = await supabase.from('maintenance_requests').insert({
+      ...newRequest,
+      user_id: user?.id,
+      status: 'pending'
+    })
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" })
+    } else {
+      toast({ title: "Success", description: "Request submitted successfully." })
+      setIsNewRequestOpen(false)
+      setNewRequest({ title: "", description: "", priority: "Medium", unit: "" })
+      fetchRequests()
+    }
+  }
+
+  const filteredRequests = requests.filter(request => {
+    const matchesStatus = statusFilter === "All" || request.status.toLowerCase() === statusFilter.toLowerCase()
+    const matchesPriority = priorityFilter === "All" || request.priority.toLowerCase() === priorityFilter.toLowerCase()
     return matchesStatus && matchesPriority
   })
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Resolved": return "bg-green-100 text-green-600"
-      case "In Progress": return "bg-blue-100 text-blue-600"
-      case "Pending": return "bg-amber-100 text-amber-600"
-      default: return "bg-slate-100 text-slate-600"
+    switch (status.toLowerCase()) {
+      case "resolved": return "bg-green-500/20 text-green-400 border-green-500/30"
+      case "in progress": return "bg-blue-500/20 text-blue-400 border-blue-500/30"
+      case "pending": return "bg-amber-500/20 text-amber-400 border-amber-500/30"
+      default: return "bg-white/10 text-white/60 border-white/10"
     }
   }
 
   const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "High": return "bg-red-100 text-red-600"
-      case "Medium": return "bg-amber-100 text-amber-600"
-      case "Low": return "bg-green-100 text-green-600"
-      default: return "bg-slate-100 text-slate-600"
+    switch (priority.toLowerCase()) {
+      case "high": return "bg-red-500/20 text-red-400 border-red-500/30"
+      case "medium": return "bg-amber-500/20 text-amber-400 border-amber-500/30"
+      case "low": return "bg-green-500/20 text-green-400 border-green-500/30"
+      default: return "bg-white/10 text-white/60 border-white/10"
     }
   }
-
-  const handleViewDetails = (id: string) => {
-    const request = maintenanceRequests.find(r => r.id === id)
-    if (request) {
-      setSelectedRequest(id)
-      setEditNotes(request.notes || "")
-      setEditStatus(request.status)
-      setIsEditing(false)
-    }
-  }
-
-  const handleUpdate = () => {
-    alert(`Updated request ${selectedRequest} with status: ${editStatus} and notes: ${editNotes}`)
-    setIsEditing(false)
-  }
-
-  const handleBack = () => {
-    setSelectedRequest(null)
-    setIsEditing(false)
-  }
-
-  const request = selectedRequest ? maintenanceRequests.find(r => r.id === selectedRequest) : null
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="container mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold text-slate-900">Maintenance Requests</h1>
-          <p className="text-slate-600">Track and manage building maintenance issues</p>
-        </div>
+    <div className="min-h-screen neo-theme text-foreground relative z-10 pt-4">
+      {/* Background ambient light */}
+      <div className="absolute inset-0 z-[-1] pointer-events-none opacity-40">
+        <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-primary/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-accent/20 blur-[120px] rounded-full" />
       </div>
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 lg:px-8 py-8">
         {!selectedRequest ? (
           <>
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+              <div>
+                <motion.h1 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-4xl md:text-5xl font-bold mb-2 tracking-tight text-white"
+                >
+                  Maintenance Requests
+                </motion.h1>
+                <motion.p 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-white/50 text-lg"
+                >
+                  Track and manage building maintenance issues
+                </motion.p>
+              </div>
+              <Button 
+                onClick={() => setIsNewRequestOpen(true)}
+                className="btn-gradient border-0 font-bold shadow-xl shadow-primary/20 h-12 px-6 rounded-xl"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                New Request
+              </Button>
+            </div>
+
             {/* Filter Bar */}
-            <Card className="mb-6 border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex gap-4">
-                  <div className="flex gap-1 rounded-lg border border-slate-200 p-1 bg-slate-50">
-                    {statuses.map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => setStatusFilter(status)}
-                        className={cn(
-                          "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                          statusFilter === status
-                            ? "bg-white text-emerald-600 shadow-sm"
-                            : "text-slate-600 hover:bg-white/50"
-                        )}
-                      >
-                        {status}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-1 rounded-lg border border-slate-200 p-1 bg-slate-50">
-                    {priorities.map((priority) => (
-                      <button
-                        key={priority}
-                        onClick={() => setPriorityFilter(priority)}
-                        className={cn(
-                          "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                          priorityFilter === priority
-                            ? "bg-white text-emerald-600 shadow-sm"
-                            : "text-slate-600 hover:bg-white/50"
-                        )}
-                      >
-                        {priority}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex flex-wrap gap-4 mb-8">
+              <div className="flex gap-1 rounded-xl border border-white/10 p-1 bg-white/5 backdrop-blur-md">
+                {statuses.map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    className={cn(
+                      "px-4 py-2 text-xs font-bold rounded-lg transition-all uppercase tracking-wider",
+                      statusFilter === status
+                        ? "bg-white text-black shadow-lg"
+                        : "text-white/60 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1 rounded-xl border border-white/10 p-1 bg-white/5 backdrop-blur-md">
+                {priorities.map((priority) => (
+                  <button
+                    key={priority}
+                    onClick={() => setPriorityFilter(priority)}
+                    className={cn(
+                      "px-4 py-2 text-xs font-bold rounded-lg transition-all uppercase tracking-wider",
+                      priorityFilter === priority
+                        ? "bg-white text-black shadow-lg"
+                        : "text-white/60 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    {priority}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Results Count */}
-            <div className="mb-4">
-              <p className="text-sm text-slate-600">
-                Showing <span className="font-semibold">{filteredRequests.length}</span> of <span className="font-semibold">{maintenanceRequests.length}</span> requests
+            <div className="mb-6 flex items-center justify-between">
+              <p className="text-sm text-white/40 font-medium">
+                Showing <span className="text-white font-bold">{filteredRequests.length}</span> requests
               </p>
             </div>
 
-            {/* Requests Grid */}
+            {/* Requests List */}
             <div className="grid gap-4">
-              {filteredRequests.length === 0 ? (
-                <Card className="border-slate-200">
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Wrench className="h-12 w-12 text-slate-300 mb-3" />
-                    <h3 className="text-lg font-semibold text-slate-900 mb-1">No maintenance requests found</h3>
-                    <p className="text-slate-500 text-sm">Try adjusting your filter criteria</p>
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 text-white/20">
+                  <Loader2 className="h-10 w-10 animate-spin mb-4" />
+                  <p>Loading requests...</p>
+                </div>
+              ) : filteredRequests.length === 0 ? (
+                <Card className="glass-effect border-white/10">
+                  <CardContent className="flex flex-col items-center justify-center py-20">
+                    <Wrench className="h-16 w-16 text-white/10 mb-4" />
+                    <h3 className="text-xl font-bold text-white mb-2">No maintenance requests found</h3>
+                    <p className="text-white/40">Adjust your filters or create a new request.</p>
                   </CardContent>
                 </Card>
               ) : (
-                filteredRequests.map((request, index) => (
-                  <motion.div
-                    key={request.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}>
-                    <Card
-                      className="border-slate-200 hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer"
-                      onClick={() => handleViewDetails(request.id)}
+                <AnimatePresence mode="popLayout">
+                  {filteredRequests.map((request, index) => (
+                    <motion.div
+                      key={request.id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: index * 0.05 }}
                     >
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-slate-900">{request.title}</h3>
-                              <span className={cn("text-xs px-2 py-0.5 rounded-full", getPriorityColor(request.priority))}>
-                                {request.priority}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-slate-500">
-                              <div className="flex items-center gap-1">
-                                <Building2 className="h-3 w-3" />
-                                <span>Unit {request.unit}</span>
+                      <Card
+                        className="glass-effect border-white/10 hover:border-primary/30 card-hover cursor-pointer group"
+                        onClick={() => setSelectedRequest(request)}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between gap-6">
+                            <div className="flex-1 space-y-4">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <h3 className="font-bold text-white text-xl group-hover:text-primary transition-colors">{request.title}</h3>
+                                <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border", getPriorityColor(request.priority))}>
+                                  {request.priority}
+                                </span>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                <span>{new Date(request.date).toLocaleDateString()}</span>
+                              <div className="flex items-center gap-4 text-xs font-semibold text-white/30">
+                                <div className="flex items-center gap-1.5">
+                                  <Building2 className="h-4 w-4" />
+                                  <span>Unit {request.unit}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>{new Date(request.created_at).toLocaleDateString()}</span>
+                                </div>
                               </div>
+                              <p className="text-sm text-white/50 leading-relaxed line-clamp-2">{request.description}</p>
                             </div>
-                            <p className="text-sm text-slate-600 line-clamp-2">{request.description}</p>
+                            <div className={cn(
+                              "flex h-12 w-12 items-center justify-center rounded-2xl border flex-shrink-0 shadow-lg transition-transform group-hover:scale-110",
+                              getStatusColor(request.status)
+                            )}>
+                              {request.status.toLowerCase() === "resolved" ? (
+                                <CheckCircle className="h-6 w-6" />
+                              ) : (
+                                <Clock className="h-6 w-6" />
+                              )}
+                            </div>
                           </div>
-                          <div className={cn(
-                            "flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0",
-                            getStatusColor(request.status)
-                          )}>
-                            {request.status === "Resolved" ? (
-                              <CheckCircle className="h-5 w-5" />
-                            ) : request.status === "In Progress" ? (
-                              <Clock className="h-5 w-5" />
-                            ) : (
-                              <AlertTriangle className="h-5 w-5" />
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               )}
             </div>
           </>
         ) : (
-          /* Request Details View */
+          /* Request Details View (Full Screen Style) */
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="max-w-3xl mx-auto"
+            className="max-w-4xl mx-auto"
           >
             <Button
               variant="ghost"
-              onClick={handleBack}
-              className="mb-4 text-slate-600 hover:text-slate-900"
+              onClick={() => setSelectedRequest(null)}
+              className="mb-8 text-white/60 hover:text-white hover:bg-white/5 h-12 px-6 rounded-xl font-bold"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Requests
+              <ArrowLeft className="mr-3 h-5 w-5" />
+              Back to List
             </Button>
 
-            <Card className="border-slate-200">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <CardTitle className="text-xl">{request?.title}</CardTitle>
-                      <span className={cn("text-xs px-2 py-0.5 rounded-full", getPriorityColor(request?.priority || ""))}>
-                        {request?.priority}
+            <Card className="glass-effect border-white/10 overflow-hidden">
+              <div className={cn("h-2 w-full", getPriorityColor(selectedRequest.priority).split(' ')[0])} />
+              <CardContent className="p-10 space-y-10">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-8">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border", getStatusColor(selectedRequest.status))}>
+                        {selectedRequest.status}
+                      </span>
+                      <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border", getPriorityColor(selectedRequest.priority))}>
+                        {selectedRequest.priority} Priority
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-slate-500">
-                      <div className="flex items-center gap-1">
-                        <Building2 className="h-4 w-4" />
-                        <span>Unit {request?.unit}</span>
+                    <h2 className="text-4xl font-bold text-white tracking-tight">{selectedRequest.title}</h2>
+                    <div className="flex items-center gap-6 text-sm font-semibold text-white/30">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5" />
+                        <span>Unit {selectedRequest.unit}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>{new Date(request?.date || "").toLocaleDateString()}</span>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5" />
+                        <span>Submitted on {new Date(selectedRequest.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
                   <div className={cn(
-                    "flex h-12 w-12 items-center justify-center rounded-lg",
-                    getStatusColor(request?.status || "")
+                    "flex h-20 w-20 items-center justify-center rounded-3xl border flex-shrink-0 shadow-2xl",
+                    getStatusColor(selectedRequest.status)
                   )}>
-                    {request?.status === "Resolved" ? (
-                      <CheckCircle className="h-6 w-6" />
-                    ) : request?.status === "In Progress" ? (
-                      <Clock className="h-6 w-6" />
+                    {selectedRequest.status.toLowerCase() === "resolved" ? (
+                      <CheckCircle className="h-10 w-10" />
                     ) : (
-                      <AlertTriangle className="h-6 w-6" />
+                      <Clock className="h-10 w-10" />
                     )}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-700 mb-2">Description</h3>
-                  <p className="text-slate-600">{request?.description}</p>
-                </div>
 
-                <div className="border-t border-slate-200 pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-slate-700">Status & Notes</h3>
-                    {!isEditing && request?.status !== "Resolved" && (
-                      <Button
-                        size="sm"
-                        onClick={() => setIsEditing(true)}
-                        className="bg-emerald-600 hover:bg-emerald-700"
-                      >
-                        Update
-                      </Button>
-                    )}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-primary" />
+                    Problem Description
+                  </h4>
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10 leading-relaxed text-white/70 text-lg">
+                    {selectedRequest.description}
                   </div>
-
-                  {isEditing ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-slate-700 mb-2 block">Status</label>
-                        <select
-                          value={editStatus}
-                          onChange={(e) => setEditStatus(e.target.value)}
-                          className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Resolved">Resolved</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-700 mb-2 block">Notes</label>
-                        <Textarea
-                          value={editNotes}
-                          onChange={(e) => setEditNotes(e.target.value)}
-                          placeholder="Add notes about this request..."
-                          className="min-h-[100px] border-slate-200"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={handleUpdate} className="bg-emerald-600 hover:bg-emerald-700">
-                          Save Changes
-                        </Button>
-                        <Button variant="outline" onClick={() => setIsEditing(false)} className="border-slate-200">
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className={cn("text-xs px-2 py-0.5 rounded-full", getStatusColor(request?.status || ""))}>
-                          {request?.status}
-                        </span>
-                      </div>
-                      {request?.notes ? (
-                        <div className="p-4 bg-slate-50 rounded-lg">
-                          <p className="text-sm text-slate-600">{request.notes}</p>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-slate-400 italic">No notes added yet</p>
-                      )}
-                    </div>
-                  )}
                 </div>
+
+                {selectedRequest.notes && (
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-400" />
+                      Resolution Notes
+                    </h4>
+                    <div className="p-6 rounded-2xl bg-green-500/5 border border-green-500/20 leading-relaxed text-green-400/80">
+                      {selectedRequest.notes}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
         )}
       </div>
+
+      {/* New Request Dialog */}
+      <Dialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen}>
+        <DialogContent className="glass-effect border-white/10 text-white max-w-lg rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">New Maintenance Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-white/60 uppercase tracking-wider">Title</label>
+              <Input 
+                placeholder="Ex: Leaking pipe in bathroom" 
+                value={newRequest.title}
+                onChange={e => setNewRequest({...newRequest, title: e.target.value})}
+                className="bg-white/5 border-white/10 h-12 rounded-xl focus:border-primary transition-all"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-white/60 uppercase tracking-wider">Unit</label>
+                <Input 
+                  placeholder="Ex: A-302" 
+                  value={newRequest.unit}
+                  onChange={e => setNewRequest({...newRequest, unit: e.target.value})}
+                  className="bg-white/5 border-white/10 h-12 rounded-xl focus:border-primary transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-white/60 uppercase tracking-wider">Priority</label>
+                <select 
+                  value={newRequest.priority}
+                  onChange={e => setNewRequest({...newRequest, priority: e.target.value})}
+                  className="w-full h-12 px-4 rounded-xl border border-white/10 bg-black/40 text-white focus:border-primary outline-none appearance-none"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-white/60 uppercase tracking-wider">Description</label>
+              <Textarea 
+                placeholder="Describe the issue in detail..." 
+                value={newRequest.description}
+                onChange={e => setNewRequest({...newRequest, description: e.target.value})}
+                className="bg-white/5 border-white/10 min-h-[120px] rounded-2xl focus:border-primary transition-all resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-3">
+            <Button variant="ghost" onClick={() => setIsNewRequestOpen(false)} className="h-12 px-6 rounded-xl font-bold text-white/60">
+              Cancel
+            </Button>
+            <Button onClick={handleCreateRequest} className="btn-gradient border-0 h-12 px-8 rounded-xl font-bold shadow-xl shadow-primary/20">
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

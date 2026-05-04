@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Settings, Bell, Shield, Globe, Save } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function SettingsPage() {
+  const { toast } = useToast()
   const [settings, setSettings] = useState({
     siteName: "Batima Gest",
     supportEmail: "support@batima-gest.com",
@@ -18,7 +20,7 @@ export default function SettingsPage() {
   })
 
   const handleSave = () => {
-    alert("Settings saved successfully!")
+    toast({ title: "Settings saved", description: "All system settings have been updated." })
   }
 
   return (

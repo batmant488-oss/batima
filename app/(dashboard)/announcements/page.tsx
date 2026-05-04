@@ -1,26 +1,53 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Megaphone, Calendar, Clock, AlertCircle, CheckCircle, Plus, Share2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const announcements = [
-  { id: "1", title: "Elevator Maintenance Scheduled", content: "Elevator will be under maintenance on April 22nd from 8am to 12pm. Please use the stairs during this time.", date: "2024-04-20T09:00:00Z", urgent: true, author: "Building Management", category: "Maintenance" },
-  { id: "2", title: "Water Shutoff Notice", content: "Temporary water shutoff for building B to repair main pipe. Will last around 2 hours.", date: "2024-04-19T14:30:00Z", urgent: false, author: "Building Management", category: "Utilities" },
-  { id: "3", title: "Community Meeting", content: "Monthly community meeting this Saturday at 10am in the main lobby. All residents welcome to attend.", date: "2024-04-18T16:00:00Z", urgent: false, author: "Resident Council", category: "Community" },
-  { id: "4", title: "Pool Maintenance Complete", content: "The pool maintenance has been completed successfully. The pool is now open for all residents.", date: "2024-04-15T11:00:00Z", urgent: false, author: "Building Management", category: "Facilities" },
-  { id: "5", title: "Parking Lot Resurfacing", content: "Parking lot B will be resurfaced next week. Please use alternative parking during this time.", date: "2024-04-12T09:00:00Z", urgent: true, author: "Building Management", category: "Maintenance" }
-]
+import { supabase } from "@/lib/supabase"
 
 const categories = ["All", "Maintenance", "Utilities", "Community", "Facilities"]
 
 export default function AnnouncementsPage() {
+  const [announcements, setAnnouncements] = useState<any[]>([])
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [showUrgentOnly, setShowUrgentOnly] = useState(false)
   const [readAnnouncements, setReadAnnouncements] = useState<Set<string>>(new Set())
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [newAnnouncement, setNewAnnouncement] = useState({ title: "", content: "", urgent: false, category: "Maintenance" })
+
+  useEffect(() => {
+    fetchAnnouncements()
+  }, [])
+
+  const fetchAnnouncements = async () => {
+    const { data, error } = await supabase.from('announcements').select('*').order('date', { ascending: false })
+    if (data) setAnnouncements(data)
+  }
+
+  const handleNewAnnouncement = async () => {
+    const { data: userData } = await supabase.auth.getUser()
+    const authorName = userData?.user?.email || "Admin" // Defaulting to Admin for demo
+
+    const { error } = await supabase.from('announcements').insert([{
+      ...newAnnouncement,
+      author: authorName
+    }])
+
+    if (!error) {
+      setIsDialogOpen(false)
+      setNewAnnouncement({ title: "", content: "", urgent: false, category: "Maintenance" })
+      fetchAnnouncements()
+    } else {
+      alert("Error creating announcement: " + error.message)
+    }
+  }
 
   const filteredAnnouncements = announcements.filter(announcement => {
     const matchesCategory = selectedCategory === "All" || announcement.category === selectedCategory
@@ -37,10 +64,6 @@ export default function AnnouncementsPage() {
     if (announcement) {
       alert(`Sharing announcement: ${announcement.title}`)
     }
-  }
-
-  const handleNewAnnouncement = () => {
-    alert("Opening new announcement form...")
   }
 
   return (
@@ -95,10 +118,55 @@ export default function AnnouncementsPage() {
           <p className="text-sm text-slate-600">
             Showing <span className="font-semibold">{filteredAnnouncements.length}</span> of <span className="font-semibold">{announcements.length}</span> announcements
           </p>
-          <Button onClick={handleNewAnnouncement} className="bg-emerald-600 hover:bg-emerald-700">
-            <Plus className="mr-2 h-4 w-4" />
-            New Announcement
-          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-emerald-600 hover:bg-emerald-700">
+                <Plus className="mr-2 h-4 w-4" />
+                New Announcement
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Announcement</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input value={newAnnouncement.title} onChange={e => setNewAnnouncement({...newAnnouncement, title: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Content</Label>
+                  <Textarea value={newAnnouncement.content} onChange={e => setNewAnnouncement({...newAnnouncement, content: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {categories.filter(c => c !== "All").map(c => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewAnnouncement({...newAnnouncement, category: c})}
+                        className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                          newAnnouncement.category === c
+                            ? "bg-primary/20 border-primary/50 text-primary"
+                            : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input type="checkbox" id="urgent" checked={newAnnouncement.urgent} onChange={e => setNewAnnouncement({...newAnnouncement, urgent: e.target.checked})} />
+                  <Label htmlFor="urgent">Mark as urgent</Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleNewAnnouncement}>Publish Announcement</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Announcements Grid */}

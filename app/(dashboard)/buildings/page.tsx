@@ -167,6 +167,7 @@ export default function BuildingsPage() {
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
 
   const filteredBuildings = buildings.filter((building) => {
     const matchesStatus = statusFilter === "all" || building.status === statusFilter
@@ -558,6 +559,13 @@ export default function BuildingsPage() {
                       </span>
                     </div>
                   </div>
+
+                  <Button
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 mt-2"
+                    onClick={() => { setSelectedBuilding(building); setIsDetailDialogOpen(true) }}
+                  >
+                    View Details
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
@@ -696,55 +704,78 @@ export default function BuildingsPage() {
         </motion.div>
       )}
 
-      {/* Edit Building Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+      {/* Building Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Building</DialogTitle>
-            <DialogDescription>
-              Update building information and details
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Building className="h-5 w-5 text-primary" />
+              {selectedBuilding?.name}
+            </DialogTitle>
           </DialogHeader>
           {selectedBuilding && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-5 py-2">
+              {/* Status + Rating */}
+              <div className="flex items-center gap-3">
+                {getStatusBadge(selectedBuilding.status)}
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                  <span className="font-semibold text-white">{selectedBuilding.rating}</span>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
+                <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold text-white">{selectedBuilding.address}</p>
+                  <p className="text-sm text-white/50">{selectedBuilding.city}, {selectedBuilding.state} {selectedBuilding.zipCode}</p>
+                </div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-white/40 mb-1">Total Units</p>
+                  <p className="text-2xl font-bold text-white">{selectedBuilding.totalUnits}</p>
+                  <p className="text-xs text-white/40 mt-1">{selectedBuilding.occupiedUnits} occupied · {selectedBuilding.availableUnits} available</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-white/40 mb-1">Occupancy Rate</p>
+                  <p className="text-2xl font-bold text-emerald-400">{getOccupancyRate(selectedBuilding)}%</p>
+                  <div className="mt-2 h-1.5 bg-white/10 rounded-full">
+                    <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${getOccupancyRate(selectedBuilding)}%` }} />
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-white/40 mb-1">Floors</p>
+                  <p className="text-2xl font-bold text-white">{selectedBuilding.floors}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-white/40 mb-1">Year Built</p>
+                  <p className="text-2xl font-bold text-white">{selectedBuilding.yearBuilt}</p>
+                </div>
+              </div>
+
+              {/* Manager + Inspection */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-white/40 mb-1">Manager</p>
+                  <p className="font-semibold text-white">{selectedBuilding.manager}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-white/40 mb-1">Last Inspection</p>
+                  <p className="font-semibold text-white">{new Date(selectedBuilding.lastInspection).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {/* Amenities */}
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-2 block">
-                  Building Name
-                </label>
-                <Input defaultValue={selectedBuilding.name} className="border-slate-200" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 mb-2 block">
-                  Street Address
-                </label>
-                <Input defaultValue={selectedBuilding.address} className="border-slate-200" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-2 block">
-                    City
-                  </label>
-                  <Input defaultValue={selectedBuilding.city} className="border-slate-200" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-2 block">
-                    State
-                  </label>
-                  <Input defaultValue={selectedBuilding.state} className="border-slate-200" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-2 block">
-                    Total Units
-                  </label>
-                  <Input type="number" defaultValue={selectedBuilding.totalUnits} className="border-slate-200" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-2 block">
-                    Floors
-                  </label>
-                  <Input type="number" defaultValue={selectedBuilding.floors} className="border-slate-200" />
+                <p className="text-xs text-white/40 mb-2">Amenities</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedBuilding.amenities.map(a => (
+                    <span key={a} className="px-3 py-1 rounded-full text-xs font-medium bg-primary/15 border border-primary/20 text-primary">{a}</span>
+                  ))}
                 </div>
               </div>
             </div>
@@ -752,9 +783,55 @@ export default function BuildingsPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-              className="border-slate-200"
+              className="border-white/10 text-white/60 hover:bg-white/5"
+              onClick={() => { setIsDetailDialogOpen(false); setIsEditDialogOpen(true) }}
             >
+              <Edit className="mr-2 h-4 w-4" /> Edit Building
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Building Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Building</DialogTitle>
+          </DialogHeader>
+          {selectedBuilding && (
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-2 block">Building Name</label>
+                <Input defaultValue={selectedBuilding.name} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-white/80 mb-2 block">Street Address</label>
+                <Input defaultValue={selectedBuilding.address} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-white/80 mb-2 block">City</label>
+                  <Input defaultValue={selectedBuilding.city} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-white/80 mb-2 block">State</label>
+                  <Input defaultValue={selectedBuilding.state} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-white/80 mb-2 block">Total Units</label>
+                  <Input type="number" defaultValue={selectedBuilding.totalUnits} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-white/80 mb-2 block">Floors</label>
+                  <Input type="number" defaultValue={selectedBuilding.floors} />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-white/10 text-white/60">
               Cancel
             </Button>
             <Button onClick={handleEditBuilding} className="bg-emerald-600 hover:bg-emerald-700">

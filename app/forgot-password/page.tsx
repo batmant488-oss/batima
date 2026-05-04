@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { motion } from "framer-motion"
 import { Mail, ArrowLeft, CheckCircle, Lock } from "lucide-react"
 import Link from "next/link"
+import { supabase } from "@/lib/supabase"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -29,14 +30,24 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    setTimeout(() => {
-      setSubmitted(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email)
+
+    if (error) {
       toast({
-        title: "Email sent!",
-        description: "If an account exists with this email, you will receive password reset instructions.",
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
       })
       setLoading(false)
-    }, 1000)
+      return
+    }
+
+    setSubmitted(true)
+    toast({
+      title: "Email sent!",
+      description: "If an account exists with this email, you will receive password reset instructions.",
+    })
+    setLoading(false)
   }
 
   return (

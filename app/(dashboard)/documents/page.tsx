@@ -1,87 +1,168 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileText, Download, Calendar } from "lucide-react"
+import { FileText, Download, Calendar, Search, Loader2 } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { Input } from "@/components/ui/input"
 
-const documents = [
-  { id: "d1", title: "Building Rules & Regulations", description: "Complete guide to building policies and resident responsibilities.", type: "PDF", size: "2.4 MB", date: "2024-04-15T10:00:00Z", downloads: 156 },
-  { id: "d2", title: "Community Guidelines", description: "Guidelines for community living and shared spaces.", type: "PDF", size: "890 KB", date: "2024-03-28T14:00:00Z", downloads: 123 },
-  { id: "d3", title: "Emergency Procedures", description: "Important procedures for emergency situations.", type: "PDF", size: "1.2 MB", date: "2024-04-01T11:00:00Z", downloads: 89 },
-  { id: "d4", title: "Pet Policy", description: "Rules and regulations regarding pets in the building.", type: "PDF", size: "456 KB", date: "2024-03-15T09:00:00Z", downloads: 67 },
-  { id: "d5", title: "Parking Rules", description: "Parking regulations and assigned spaces information.", type: "PDF", size: "678 KB", date: "2024-02-20T14:00:00Z", downloads: 45 }
-]
+interface Document {
+  id: string
+  title: string
+  description: string
+  file_size: string
+  download_count: number
+  file_type: string
+  created_at: string
+}
 
 export default function DocumentsPage() {
-  const handleDownload = (id: string) => {
-    const doc = documents.find(d => d.id === id)
-    if (doc) {
-      alert(`Downloading: ${doc.title}`)
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+
+  useEffect(() => {
+    fetchDocuments()
+  }, [])
+
+  const fetchDocuments = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    console.log('Documents fetch result:', { data, error })
+    
+    if (error) {
+      console.error('Error fetching documents:', error)
+    } else {
+      setDocuments(data || [])
     }
+    setLoading(false)
   }
 
+  const handleDownload = (doc: Document) => {
+    // Increment download count in DB
+    supabase
+      .from('documents')
+      .update({ download_count: doc.download_count + 1 })
+      .eq('id', doc.id)
+      .then(() => fetchDocuments())
+
+    alert(`Simulating download: ${doc.title}`)
+  }
+
+  const filtered = documents.filter(doc => 
+    doc.title.toLowerCase().includes(search.toLowerCase()) || 
+    doc.description.toLowerCase().includes(search.toLowerCase())
+  )
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="container mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold text-slate-900">Building Rules & Documents</h1>
-          <p className="text-slate-600">Access building rules and important documents</p>
-        </div>
+    <div className="min-h-screen neo-theme text-foreground relative z-10 pt-4">
+      {/* Background ambient light */}
+      <div className="absolute inset-0 z-[-1] pointer-events-none opacity-40">
+        <div className="absolute top-0 -left-1/4 w-1/2 h-1/2 bg-primary/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-accent/20 blur-[120px] rounded-full" />
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Documents Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {documents.map((doc, index) => (
-            <motion.div
-              key={doc.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}>
-              <Card className="border-slate-200 hover:border-emerald-300 hover:shadow-sm transition-all">
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100">
-                      <FileText className="h-5 w-5 text-red-500" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <h3 className="font-semibold text-slate-900 text-sm leading-tight">{doc.title}</h3>
-                      <p className="text-xs text-slate-500 line-clamp-2">{doc.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                        {doc.type}
-                      </span>
-                      <span className="text-xs text-slate-500">{doc.size}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-slate-500">
-                      <Download className="h-3 w-3" />
-                      <span>{doc.downloads}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500 mb-4">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(doc.date).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownload(doc.id)}
-                    className="w-full border-slate-200 hover:border-emerald-500 hover:text-emerald-600 transition-colors text-xs">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+      <div className="container mx-auto px-4 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-10">
+          <motion.h1 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl md:text-5xl font-bold mb-2 tracking-tight text-white"
+          >
+            Building Rules & Documents
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-white/50 text-lg"
+          >
+            Access official regulations, procedures and community guidelines
+          </motion.p>
         </div>
+
+        {/* Search */}
+        <div className="mb-8 relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <Input 
+            placeholder="Search documents..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+          />
+        </div>
+
+        {/* Documents Grid */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-white/40">
+            <Loader2 className="h-10 w-10 animate-spin mb-4" />
+            <p>Fetching documents from server...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20 text-white/20">
+            <FileText className="h-16 w-16 mx-auto mb-4 opacity-10" />
+            <p className="text-xl font-medium">No documents found</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((doc, index) => (
+              <motion.div
+                key={doc.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}>
+                <Card className="glass-effect border-white/10 card-hover overflow-hidden h-full">
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="flex items-start gap-4 mb-6">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/20 shadow-lg shadow-red-500/5 flex-shrink-0">
+                        <FileText className="h-7 w-7 text-red-400" />
+                      </div>
+                      <div className="flex-1 space-y-1 min-w-0">
+                        <h3 className="font-bold text-white text-lg leading-tight group-hover:text-primary transition-colors">{doc.title}</h3>
+                        <p className="text-sm text-white/40 line-clamp-2 leading-relaxed">{doc.description}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-auto space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-white/5 border border-white/10 text-white/60">
+                            {doc.file_type}
+                          </span>
+                          <span className="text-xs font-medium text-white/30">{doc.file_size}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs font-semibold text-white/30">
+                          <Download className="h-3.5 w-3.5" />
+                          <span>{doc.download_count}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs font-medium text-white/20">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Uploaded on {new Date(doc.created_at).toLocaleDateString()}</span>
+                      </div>
+
+                      <Button
+                        onClick={() => handleDownload(doc)}
+                        className="w-full bg-white/5 border border-white/10 hover:bg-primary/20 hover:border-primary/30 hover:text-primary transition-all duration-300 font-bold group"
+                      >
+                        <Download className="mr-2 h-4 w-4 group-hover:-translate-y-0.5 transition-transform" />
+                        Download PDF
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

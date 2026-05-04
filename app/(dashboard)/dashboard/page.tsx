@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import {
   Megaphone,
   Wrench,
@@ -13,50 +15,59 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const stats = {
-  announcements: { total: 12, urgent: 3 },
-  maintenance: { total: 8, inProgress: 5 },
-  documents: { total: 24 },
-};
-
-const recentAnnouncements = [
-  {
-    id: "1",
-    title: "Elevator Maintenance Scheduled",
-    content: "Elevator will be under maintenance on April 22nd from 8am to 12pm.",
-    date: "2024-04-20T09:00:00Z",
-    urgent: true,
-  },
-  {
-    id: "2",
-    title: "Water Shutoff Notice",
-    content: "Temporary water shutoff for building B to repair main pipe.",
-    date: "2024-04-19T14:30:00Z",
-    urgent: false,
-  },
-];
-
-const maintenanceRequests = [
-  {
-    id: "m1",
-    title: "Leaking Faucet in Kitchen",
-    status: "In Progress",
-    priority: "Medium",
-    date: "2024-04-18T10:00:00Z",
-    unit: "A-101",
-  },
-  {
-    id: "m2",
-    title: "Broken Window Seal",
-    status: "Pending",
-    priority: "High",
-    date: "2024-04-15T08:30:00Z",
-    unit: "A-304",
-  },
-];
+import { supabase } from "@/lib/supabase";
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [stats, setStats] = useState({
+    announcements: { total: 0, urgent: 0 },
+    maintenance: { total: 0, inProgress: 0 },
+    documents: { total: 0 },
+  });
+  const [recentAnnouncements, setRecentAnnouncements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    
+    // Fetch stats
+    const [announcementsRes, urgentRes, maintenanceRes] = await Promise.all([
+      supabase.from('announcements').select('id', { count: 'exact', head: true }),
+      supabase.from('announcements').select('id', { count: 'exact', head: true }).eq('urgent', true),
+      supabase.from('announcements').select('*').order('date', { ascending: false }).limit(3),
+    ]);
+
+    // For now we don't have a maintenance table yet, so we keep mock or 0
+    // But we fetch real announcements
+    setStats({
+      announcements: { 
+        total: announcementsRes.count ?? 0, 
+        urgent: urgentRes.count ?? 0 
+      },
+      maintenance: { total: 0, inProgress: 0 }, // Placeholder until maintenance table exists
+      documents: { total: 12 }, // Static for now
+    });
+
+    setRecentAnnouncements(announcementsRes.data || []);
+    
+    // Fetch real recent announcements
+    const { data: latestAnnouncements } = await supabase
+      .from('announcements')
+      .select('*')
+      .order('date', { ascending: false })
+      .limit(3);
+    
+    if (latestAnnouncements) {
+      setRecentAnnouncements(latestAnnouncements);
+    }
+
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen w-full neo-theme text-foreground relative z-10 pt-4">
       {/* Background ambient light */}
@@ -90,14 +101,14 @@ export default function DashboardPage() {
           {[
             {
               title: "Announcements",
-              value: stats.announcements.total,
+              value: loading ? "…" : stats.announcements.total,
               subtitle: `${stats.announcements.urgent} urgent`,
               color: "bg-emerald-500",
             },
             {
               title: "Maintenance",
-              value: stats.maintenance.inProgress,
-              subtitle: `${stats.maintenance.total} total`,
+              value: stats.maintenance.total,
+              subtitle: `${stats.maintenance.inProgress} in progress`,
               color: "bg-amber-500",
             },
             {
@@ -113,7 +124,6 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}>
               <Card className="glass-effect border-white/10 card-hover overflow-hidden relative">
-                {/* Subtle gradient overlay */}
                 <div className={`absolute inset-0 opacity-10 bg-gradient-to-br from-${stat.color.replace('bg-', '')} to-transparent`} />
                 <CardContent className="p-6 relative z-10">
                   <div className="flex items-center justify-between">
@@ -143,14 +153,18 @@ export default function DashboardPage() {
               <CardHeader className="border-b border-white/5 pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl font-semibold text-white">Recent Announcements</CardTitle>
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 hover:bg-white/5 transition-colors">
+                  <Button variant="ghost" size="sm" onClick={() => router.push('/announcements')} className="text-primary hover:text-primary/80 hover:bg-white/5 transition-colors">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 pt-6">
-                {recentAnnouncements.map((announcement) => (
+                {loading ? (
+                   <div className="text-center py-8 text-white/20">Loading...</div>
+                ) : recentAnnouncements.length === 0 ? (
+                   <div className="text-center py-8 text-white/20">No announcements yet.</div>
+                ) : recentAnnouncements.map((announcement) => (
                   <div
                     key={announcement.id}
                     className={cn(
@@ -159,7 +173,7 @@ export default function DashboardPage() {
                         ? "bg-destructive/10 hover:bg-destructive/20 hover:border-destructive/30"
                         : "bg-white/5 hover:bg-white/10 hover:border-white/20",
                     )}
-                    onClick={() => alert(`Viewing: ${announcement.title}`)}>
+                    onClick={() => router.push('/announcements')}>
                     <div className="flex items-start gap-4">
                       <div
                         className={cn(
@@ -174,7 +188,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2 mt-3">
                           <Clock className="h-3.5 w-3.5 text-muted-foreground/60" />
                           <p className="text-xs text-muted-foreground/80 font-medium">
-                            {new Date(announcement.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {new Date(announcement.date).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
@@ -185,7 +199,7 @@ export default function DashboardPage() {
             </Card>
           </motion.div>
 
-          {/* Maintenance Requests */}
+          {/* Maintenance (Static for now) */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -194,53 +208,15 @@ export default function DashboardPage() {
               <CardHeader className="border-b border-white/5 pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl font-semibold text-white">Maintenance Requests</CardTitle>
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 hover:bg-white/5 transition-colors">
+                  <Button variant="ghost" size="sm" onClick={() => router.push('/maintenance')} className="text-primary hover:text-primary/80 hover:bg-white/5 transition-colors">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4 pt-6">
-                {maintenanceRequests.map((request) => (
-                  <div
-                    key={request.id}
-                    className="p-5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer group"
-                    onClick={() => alert(`Viewing: ${request.title}`)}>
-                    <div className="flex items-start gap-4">
-                      <div
-                        className={cn(
-                          "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm transition-transform group-hover:scale-110",
-                          request.status === "In Progress"
-                            ? "bg-blue-500/20 text-blue-400"
-                            : "bg-amber-500/20 text-amber-400",
-                        )}>
-                        {request.status === "In Progress" ? (
-                          <Clock className="h-5 w-5" />
-                        ) : (
-                          <Wrench className="h-5 w-5" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-white text-base">{request.title}</h4>
-                        <div className="flex items-center gap-3 mt-2.5">
-                          <span
-                            className={cn(
-                              "text-xs px-2.5 py-1 rounded-full font-medium shadow-sm",
-                              request.status === "In Progress"
-                                ? "bg-blue-500/20 text-blue-300 border border-blue-500/20"
-                                : "bg-amber-500/20 text-amber-300 border border-amber-500/20",
-                            )}>
-                            {request.status}
-                          </span>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-full border border-white/5">
-                            <Building2 className="h-3 w-3" />
-                            Unit {request.unit}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <CardContent className="space-y-4 pt-6 text-center py-12 text-white/20">
+                 <Wrench className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                 <p>Maintenance tracking system coming soon.</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -263,12 +239,9 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-bold text-white text-xl tracking-tight">Your Building</h3>
-                  <p className="text-muted-foreground mt-1 flex items-center gap-2">
-                    <span className="bg-white/10 px-2 py-0.5 rounded-md text-white text-sm">Unit A-101</span> 
-                    <span className="text-sm border-l border-white/20 pl-2">2BR, 2BA</span>
-                  </p>
+                  <p className="text-muted-foreground mt-1">Manage your residential details and facilities.</p>
                 </div>
-                <Button className="btn-gradient border-0 font-semibold shadow-xl">
+                <Button onClick={() => router.push('/buildings')} className="btn-gradient border-0 font-semibold shadow-xl">
                   View Details
                 </Button>
               </div>

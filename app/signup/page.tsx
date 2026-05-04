@@ -4,30 +4,43 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { ArrowRight, Building2, Check, CheckCircle, Lock, Mail, Shield, User } from "lucide-react"
+import { ArrowRight, Building2, Check, CheckCircle, Lock, Mail, Shield, User, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
+import { supabase } from "@/lib/supabase"
+import { useEffect } from "react"
 
 export default function SignupPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [buildings, setBuildings] = useState<any[]>([])
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    building: "",
+    unitNumber: "",
     password: "",
     confirmPassword: "",
   })
+
+  useEffect(() => {
+    const fetchBuildings = async () => {
+      const { data } = await supabase.from('buildings').select('*').order('name')
+      if (data) setBuildings(data)
+    }
+    fetchBuildings()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name || !formData.email || !formData.building || !formData.password || !formData.confirmPassword) {
       toast({
         title: "Missing details",
-        description: "Fill in every field to create your account.",
+        description: "Veuillez sélectionner un bâtiment et remplir tous les champs.",
         variant: "destructive",
       })
       setLoading(false)
@@ -44,14 +57,44 @@ export default function SignupPage() {
       return
     }
 
-    window.setTimeout(() => {
-      toast({
-        title: "Account created",
-        description: "Your account has been created successfully. Please sign in.",
+    const { data, error } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          name: formData.name,
+          building: formData.building,
+          unit: formData.unitNumber,
+        }
+      }
+    })
+
+    // Also insert into profiles table
+    if (!error && data.user) {
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        name: formData.name,
+        unit: `${formData.building}${formData.unitNumber ? " – Apt " + formData.unitNumber : ""}`,
+        email: formData.email,
       })
-      router.push("/login")
+    }
+
+    if (error) {
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
+      })
       setLoading(false)
-    }, 900)
+      return
+    }
+
+    toast({
+      title: "Account created",
+      description: "Your account has been created successfully. Please sign in.",
+    })
+    router.push("/login")
+    setLoading(false)
   }
 
   return (
@@ -159,6 +202,41 @@ export default function SignupPage() {
                         required
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-white/90">Votre bâtiment</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {buildings.map(b => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, building: b.name })}
+                          className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                            formData.building === b.name
+                              ? "border-primary/50 bg-primary/10 text-primary"
+                              : "border-white/10 bg-black/20 text-white/60 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5 font-semibold text-sm">
+                            <Home className="h-3.5 w-3.5 shrink-0" />
+                            {b.name}
+                          </span>
+                          <span className="text-xs mt-0.5 opacity-60">{b.info}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {formData.building && (
+                      <div className="mt-2 relative">
+                        <Building2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Numéro d'appartement (ex: 302)"
+                          value={formData.unitNumber}
+                          onChange={(e) => setFormData({ ...formData, unitNumber: e.target.value })}
+                          className="h-11 rounded-xl border-white/10 bg-black/20 pl-10 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div>
