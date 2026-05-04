@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 31% 6%;
+    --foreground: 210 40% 96%;
+    --card: 235 30% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 234 30% 10%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 189 100% 50%;
+    --primary-foreground: 232 34% 7%;
+    --secondary: 242 23% 15%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 240 20% 18%;
+    --muted-foreground: 220 13% 68%;
+    --accent: 291 100% 50%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 78% 61%;
+    --destructive-foreground: 210 40% 96%;
+    --border: 240 19% 24%;
+    --input: 240 19% 24%;
+    --ring: 189 100% 50%;
+    --radius: 1.25rem;
+
+    --neon-cyan: #00f5ff;
+    --neon-magenta: #ff00c8;
+    --neon-violet: #8a2ce2;
+    --grid-color: rgba(105, 115, 155, 0.16);
+  }
+
+  .dark {
+    --background: 240 31% 6%;
+    --foreground: 210 40% 96%;
+    --card: 235 30% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 234 30% 10%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 189 100% 50%;
+    --primary-foreground: 232 34% 7%;
+    --secondary: 242 23% 15%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 240 20% 18%;
+    --muted-foreground: 220 13% 68%;
+    --accent: 291 100% 50%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 78% 61%;
+    --destructive-foreground: 210 40% 96%;
+    --border: 240 19% 24%;
+    --input: 240 19% 24%;
+    --ring: 189 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+    background-image:
+      radial-gradient(circle at 12% 8%, rgba(0, 245, 255, 0.12), transparent 28%),
+      radial-gradient(circle at 88% 10%, rgba(138, 44, 226, 0.2), transparent 30%),
+      linear-gradient(180deg, #0a0a0f 0%, #0b0c14 55%, #0d1020 100%);
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+  }
+
+  .neo-grid {
+    background-image:
+      linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .glass-effect {
+    @apply border border-white/10 bg-slate-900/65 backdrop-blur-xl;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.55);
+  }
+
+  .btn-gradient {
+    @apply bg-gradient-to-r text-slate-950;
+    background-image: linear-gradient(92deg, var(--neon-cyan) 0%, #57d5ff 42%, #ff6ae2 100%);
+    box-shadow: 0 10px 24px rgba(0, 245, 255, 0.3);
+  }
+
+  .neo-theme .min-h-screen {
+    min-height: calc(100vh - 1rem);
+  }
+
+  .neo-theme .bg-gray-50,
+  .neo-theme .bg-slate-50,
+  .neo-theme .bg-white {
+    background-color: rgba(15, 20, 35, 0.72) !important;
+    backdrop-filter: blur(18px);
+  }
+
+  .neo-theme .text-gray-900,
+  .neo-theme .text-gray-800,
+  .neo-theme .text-gray-700,
+  .neo-theme .text-gray-600,
+  .neo-theme .text-gray-500,
+  .neo-theme .text-slate-900,
+  .neo-theme .text-slate-800,
+  .neo-theme .text-slate-700,
+  .neo-theme .text-slate-600,
+  .neo-theme .text-slate-500 {
+    color: #d4d8e7 !important;
+  }
+
+  .neo-theme .text-gray-400,
+  .neo-theme .text-slate-400 {
+    color: #9da7c2 !important;
+  }
+
+  .neo-theme .border-gray-100,
+  .neo-theme .border-gray-200,
+  .neo-theme .border-gray-300,
+  .neo-theme .border-slate-100,
+  .neo-theme .border-slate-200,
+  .neo-theme .border-slate-300,
+  .neo-theme .border-2 {
+    border-color: rgba(148, 163, 184, 0.24) !important;
+  }
+
+  .neo-theme .shadow,
+  .neo-theme .shadow-sm,
+  .neo-theme .shadow-md,
+  .neo-theme .shadow-lg,
+  .neo-theme .shadow-xl,
+  .neo-theme .shadow-2xl {
+    box-shadow: 0 12px 32px rgba(2, 6, 23, 0.48) !important;
+  }
+
+  .neo-theme .hover\:bg-gray-50:hover,
+  .neo-theme .hover\:bg-gray-100:hover,
+  .neo-theme .hover\:bg-slate-50:hover,
+  .neo-theme .hover\:bg-slate-100:hover {
+    background-color: rgba(30, 41, 59, 0.72) !important;
+  }
+
+  .neo-theme input,
+  .neo-theme textarea,
+  .neo-theme select {
+    background-color: rgba(15, 20, 35, 0.7) !important;
+    border-color: rgba(148, 163, 184, 0.24) !important;
+    color: #dbe4ff !important;
+  }
+
+  .neo-theme table tr,
+  .neo-theme table td,
+  .neo-theme table th {
+    border-color: rgba(148, 163, 184, 0.2) !important;
+  }
+
+  .neo-theme [class*="from-blue-"],
+  .neo-theme [class*="to-blue-"],
+  .neo-theme [class*="from-indigo-"],
+  .neo-theme [class*="to-indigo-"] {
+    filter: saturate(1.15) brightness(1.04);
+  }
+
+  /* Fix light mode accent colors for neo-theme (emerald, blue, amber, red, purple, pink) */
+  .neo-theme [class*="bg-emerald-100"], .neo-theme [class*="bg-emerald-50"] { background-color: rgba(16, 185, 129, 0.15) !important; border: 1px solid rgba(16, 185, 129, 0.2); }
+  .neo-theme [class*="text-emerald-600"], .neo-theme [class*="text-emerald-700"] { color: #34d399 !important; }
+
+  .neo-theme [class*="bg-blue-100"], .neo-theme [class*="bg-blue-50"] { background-color: rgba(59, 130, 246, 0.15) !important; border: 1px solid rgba(59, 130, 246, 0.2); }
+  .neo-theme [class*="text-blue-600"], .neo-theme [class*="text-blue-700"] { color: #60a5fa !important; }
+
+  .neo-theme [class*="bg-amber-100"], .neo-theme [class*="bg-amber-50"] { background-color: rgba(245, 158, 11, 0.15) !important; border: 1px solid rgba(245, 158, 11, 0.2); }
+  .neo-theme [class*="text-amber-600"], .neo-theme [class*="text-amber-700"] { color: #fbbf24 !important; }
+
+  .neo-theme [class*="bg-red-100"], .neo-theme [class*="bg-red-50"] { background-color: rgba(239, 68, 68, 0.15) !important; border: 1px solid rgba(239, 68, 68, 0.2); }
+  .neo-theme [class*="text-red-600"], .neo-theme [class*="text-red-700"] { color: #f87171 !important; }
+
+  .neo-theme [class*="bg-purple-100"], .neo-theme [class*="bg-purple-50"] { background-color: rgba(168, 85, 247, 0.15) !important; border: 1px solid rgba(168, 85, 247, 0.2); }
+  .neo-theme [class*="text-purple-600"], .neo-theme [class*="text-purple-700"] { color: #c084fc !important; }
+
+  .neo-theme [class*="bg-pink-100"], .neo-theme [class*="bg-pink-50"] { background-color: rgba(236, 72, 153, 0.15) !important; border: 1px solid rgba(236, 72, 153, 0.2); }
+  .neo-theme [class*="text-pink-600"], .neo-theme [class*="text-pink-700"] { color: #f472b6 !important; }
+}
