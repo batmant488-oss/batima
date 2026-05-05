@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `https://batima-esc3jzyqk-batmant488-oss-projects.vercel.app/reset-password`,
+      redirectTo: `https://batima-coral.vercel.app/reset-password`,
     })
 
     if (error) {
