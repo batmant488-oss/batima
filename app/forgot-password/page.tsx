@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
                 Reset Your Password
               </h2>
               <p className="text-xl text-emerald-100">
-                We'll help you get back into your account securely.
+                We&apos;ll help you get back into your account securely.
               </p>
             </div>
           </motion.div>
@@ -114,7 +114,7 @@ export default function ForgotPasswordPage() {
                     <Mail className="h-8 w-8 text-white" />
                   </div>
                   <h1 className="mb-2 text-3xl font-bold text-slate-900">Forgot password?</h1>
-                  <p className="text-slate-600">No worries, we'll send you reset instructions.</p>
+                  <p className="text-slate-600">No worries, we&apos;ll send you reset instructions.</p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
@@ -169,7 +169,7 @@ export default function ForgotPasswordPage() {
                 </motion.div>
                 <h2 className="mb-2 text-2xl font-bold text-slate-900">Check your email</h2>
                 <p className="mb-6 text-slate-600">
-                  We've sent password reset instructions to <span className="font-semibold">{email}</span>
+                  We&apos;ve sent password reset instructions to <span className="font-semibold">{email}</span>
                 </p>
                 <div className="space-y-3">
                   <Button

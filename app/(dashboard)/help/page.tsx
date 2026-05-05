@@ -27,7 +27,7 @@ const faqs = [
   {
     id: 1,
     question: "How do I submit a maintenance request?",
-    answer: "To submit a maintenance request, navigate to the Maintenance page from your dashboard. Click on 'New Request', fill in the details including the issue description, priority level, and preferred time for maintenance.",
+    answer: "To submit a maintenance request, navigate to the Maintenance page from your dashboard. Click on &apos;New Request&apos;, fill in the details including the issue description, priority level, and preferred time for maintenance.",
     category: "Maintenance",
   },
   {
