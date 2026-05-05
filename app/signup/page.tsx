@@ -62,6 +62,7 @@ export default function SignupPage() {
       email: formData.email,
       password: formData.password,
       options: {
+        emailRedirectTo: `${window.location.origin}/login`,
         data: {
           name: formData.name,
           building: formData.building,
