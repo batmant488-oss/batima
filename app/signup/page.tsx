@@ -58,6 +58,23 @@ export default function SignupPage() {
       return
     }
 
+    // Vérification manuelle de l'email dans la table profiles
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', formData.email.toLowerCase())
+      .maybeSingle()
+
+    if (existingUser) {
+      toast({
+        title: "Email déjà utilisé",
+        description: "Un compte existe déjà avec cette adresse email. Veuillez vous connecter.",
+        variant: "destructive",
+      })
+      setLoading(false)
+      return
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
