@@ -99,6 +99,12 @@ export default function MaintenancePage() {
   }
 
   const handleUpdateStatus = async (id: string, status: string) => {
+    if (status === 'Resolved') {
+      if (!confirm("Is this job finished? The ticket will be removed from the list.")) return
+      await handleDeleteRequest(null as any, id)
+      return
+    }
+
     const { error } = await supabase
       .from('maintenance_requests')
       .update({ status })
@@ -419,10 +425,10 @@ export default function MaintenancePage() {
                       {selectedRequest.status.toLowerCase() !== 'resolved' && (
                         <Button
                           onClick={() => handleUpdateStatus(selectedRequest.id, 'Resolved')}
-                          className="bg-green-600/20 text-green-400 border border-green-600/30 hover:bg-green-600/30 font-bold"
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg shadow-green-500/20"
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
-                          Mark as Resolved
+                          Mark as Job Done
                         </Button>
                       )}
                       {selectedRequest.status.toLowerCase() === 'resolved' && (
