@@ -32,7 +32,11 @@ export default function AnnouncementsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-      if (profile?.role === 'Admin' || user.email?.toLowerCase().includes('admin')) {
+      if (
+        profile?.role === 'Admin' || 
+        user.email?.toLowerCase().includes('admin') || 
+        user.email?.toLowerCase() === 'batmant488@gmail.com'
+      ) {
         setIsAdmin(true)
       }
     }
