@@ -25,6 +25,7 @@ export default function DashboardPage() {
     documents: { total: 0 },
   });
   const [recentAnnouncements, setRecentAnnouncements] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,6 +35,19 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     setLoading(true);
     
+    // Fetch user and profile
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (profileData) {
+        setProfile(profileData);
+      }
+    }
+
     // Fetch stats
     const [announcementsRes, urgentRes, maintenanceRes] = await Promise.all([
       supabase.from('announcements').select('id', { count: 'exact', head: true }),
@@ -84,7 +98,7 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-5xl font-bold mb-2 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70"
           >
-            Welcome back
+            Welcome back{profile?.name ? `, ${profile.name.split(' ')[0]}` : ""}
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: -10 }}
@@ -92,7 +106,7 @@ export default function DashboardPage() {
             transition={{ delay: 0.1 }}
             className="text-muted-foreground text-lg"
           >
-            Here's what's happening with your building
+            {profile?.unit ? `Building details for ${profile.unit}` : "Here's what's happening with your building"}
           </motion.p>
         </div>
 
@@ -238,8 +252,12 @@ export default function DashboardPage() {
                   <Building2 className="h-8 w-8 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-white text-xl tracking-tight">Your Building</h3>
-                  <p className="text-muted-foreground mt-1">Manage your residential details and facilities.</p>
+                  <h3 className="font-bold text-white text-xl tracking-tight">
+                    {profile?.unit ? `Unit ${profile.unit}` : "Your Building"}
+                  </h3>
+                  <p className="text-muted-foreground mt-1">
+                    {profile?.unit ? "View your building details and facilities." : "Manage your residential details and facilities."}
+                  </p>
                 </div>
                 <Button onClick={() => router.push('/buildings')} className="btn-gradient border-0 font-semibold shadow-xl">
                   View Details

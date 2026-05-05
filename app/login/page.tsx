@@ -52,11 +52,20 @@ export default function LoginPage() {
     })
 
     if (error) {
+      const isUnconfirmed = error.message.toLowerCase().includes("email not confirmed")
+      
       toast({
-        title: "Sign in failed",
-        description: error.message,
+        title: isUnconfirmed ? "Email non confirmé" : "Sign in failed",
+        description: isUnconfirmed 
+          ? "Veuillez vérifier votre boîte mail pour activer votre compte avant de vous connecter." 
+          : error.message,
         variant: "destructive",
       })
+
+      if (isUnconfirmed) {
+        // Optionnel: On pourrait ouvrir un petit dialogue ou proposer de renvoyer ici
+      }
+
       setLoading(false)
       return
     }

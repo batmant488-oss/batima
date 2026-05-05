@@ -15,6 +15,7 @@ export default function SignupPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [isEmailSent, setIsEmailSent] = useState(false)
   const [buildings, setBuildings] = useState<any[]>([])
   const [formData, setFormData] = useState({
     name: "",
@@ -89,11 +90,41 @@ export default function SignupPage() {
       return
     }
 
-    toast({
-      title: "Account created",
-      description: "Your account has been created successfully. Please sign in.",
+    if (data.user && !data.session) {
+      setIsEmailSent(true)
+      toast({
+        title: "Verification email sent",
+        description: "Please check your inbox to verify your account.",
+      })
+    } else {
+      toast({
+        title: "Account created",
+        description: "Your account has been created successfully. Please sign in.",
+      })
+      router.push("/login")
+    }
+    setLoading(false)
+  }
+
+  const handleResend = async () => {
+    setLoading(true)
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: formData.email,
     })
-    router.push("/login")
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      })
+    } else {
+      toast({
+        title: "Success",
+        description: "Verification email resent.",
+      })
+    }
     setLoading(false)
   }
 
@@ -168,140 +199,177 @@ export default function SignupPage() {
               <div className="absolute top-0 right-0 p-8 opacity-5">
                 <User className="h-32 w-32 text-primary" />
               </div>
-              <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="name" className="mb-2 block text-sm font-semibold text-white/90">Full name</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="name"
-                        type="text"
-                        placeholder="John Doe"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="h-12 rounded-xl border-white/10 bg-black/20 pl-12 text-base text-white focus:border-primary focus:ring-1 focus:ring-primary"
-                        autoComplete="name"
-                        required
-                      />
-                    </div>
+              {isEmailSent ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="space-y-6 py-8 text-center"
+                >
+                  <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/20 border border-primary/30 shadow-[0_0_30px_rgba(0,245,255,0.15)]">
+                    <Mail className="h-10 w-10 text-primary" />
                   </div>
-
-                  <div>
-                    <label htmlFor="email" className="mb-2 block text-sm font-semibold text-white/90">Email address</label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your@email.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="h-12 rounded-xl border-white/10 bg-black/20 pl-12 text-base text-white focus:border-primary focus:ring-1 focus:ring-primary"
-                        autoComplete="email"
-                        required
-                      />
-                    </div>
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-bold text-white tracking-tight">Vérifiez votre boîte mail</h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Nous avons envoyé un lien de confirmation à <br />
+                      <span className="font-semibold text-white/90">{formData.email}</span>
+                    </p>
                   </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-white/90">Votre bâtiment</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {buildings.map(b => (
-                        <button
-                          key={b.id}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, building: b.name })}
-                          className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
-                            formData.building === b.name
-                              ? "border-primary/50 bg-primary/10 text-primary"
-                              : "border-white/10 bg-black/20 text-white/60 hover:bg-white/5 hover:text-white"
-                          }`}
-                        >
-                          <span className="flex items-center gap-1.5 font-semibold text-sm">
-                            <Home className="h-3.5 w-3.5 shrink-0" />
-                            {b.name}
-                          </span>
-                          <span className="text-xs mt-0.5 opacity-60">{b.info}</span>
-                        </button>
-                      ))}
-                    </div>
-                    {formData.building && (
-                      <div className="mt-2 relative">
-                        <Building2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <div className="pt-4 space-y-4">
+                    <Button 
+                      onClick={() => router.push('/login')} 
+                      className="w-full h-12 btn-gradient border-0 font-bold shadow-lg"
+                    >
+                      Aller à la connexion
+                    </Button>
+                    <p className="text-sm text-muted-foreground">
+                      Vous n'avez rien reçu ?{" "}
+                      <button 
+                        onClick={handleResend} 
+                        disabled={loading}
+                        className="font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+                      >
+                        {loading ? "Envoi..." : "Renvoyer le mail"}
+                      </button>
+                    </p>
+                  </div>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="name" className="mb-2 block text-sm font-semibold text-white/90">Full name</label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                          placeholder="Numéro d'appartement (ex: 302)"
-                          value={formData.unitNumber}
-                          onChange={(e) => setFormData({ ...formData, unitNumber: e.target.value })}
-                          className="h-11 rounded-xl border-white/10 bg-black/20 pl-10 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          id="name"
+                          type="text"
+                          placeholder="John Doe"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="h-12 rounded-xl border-white/10 bg-black/20 pl-12 text-base text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          autoComplete="name"
+                          required
                         />
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div>
-                    <label htmlFor="password" className="mb-2 block text-sm font-semibold text-white/90">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="h-12 rounded-xl border-white/10 bg-black/20 pl-12 text-base text-white focus:border-primary focus:ring-1 focus:ring-primary"
-                        autoComplete="new-password"
-                        required
-                      />
+                    <div>
+                      <label htmlFor="email" className="mb-2 block text-sm font-semibold text-white/90">Email address</label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="your@email.com"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="h-12 rounded-xl border-white/10 bg-black/20 pl-12 text-base text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          autoComplete="email"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-white/90">Votre bâtiment</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {buildings.map(b => (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, building: b.name })}
+                            className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                              formData.building === b.name
+                                ? "border-primary/50 bg-primary/10 text-primary"
+                                : "border-white/10 bg-black/20 text-white/60 hover:bg-white/5 hover:text-white"
+                            }`}
+                          >
+                            <span className="flex items-center gap-1.5 font-semibold text-sm">
+                              <Home className="h-3.5 w-3.5 shrink-0" />
+                              {b.name}
+                            </span>
+                            <span className="text-xs mt-0.5 opacity-60">{b.info}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {formData.building && (
+                        <div className="mt-2 relative">
+                          <Building2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder="Numéro d'appartement (ex: 302)"
+                            value={formData.unitNumber}
+                            onChange={(e) => setFormData({ ...formData, unitNumber: e.target.value })}
+                            className="h-11 rounded-xl border-white/10 bg-black/20 pl-10 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="password" className="mb-2 block text-sm font-semibold text-white/90">Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          className="h-12 rounded-xl border-white/10 bg-black/20 pl-12 text-base text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          autoComplete="new-password"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="confirmPassword" className="mb-2 block text-sm font-semibold text-white/90">Confirm password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          value={formData.confirmPassword}
+                          onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                          className="h-12 rounded-xl border-white/10 bg-black/20 pl-12 text-base text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          autoComplete="new-password"
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label htmlFor="confirmPassword" className="mb-2 block text-sm font-semibold text-white/90">Confirm password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        value={formData.confirmPassword}
-                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                        className="h-12 rounded-xl border-white/10 bg-black/20 pl-12 text-base text-white focus:border-primary focus:ring-1 focus:ring-primary"
-                        autoComplete="new-password"
-                        required
-                      />
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 backdrop-blur-sm">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/90">
+                      <Shield className="h-4 w-4 text-primary" />
+                      Password requirements
+                    </div>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> At least 8 characters</div>
+                      <div className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Mix of letters and numbers</div>
+                      <div className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> At least one special character</div>
                     </div>
                   </div>
-                </div>
 
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 backdrop-blur-sm">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/90">
-                    <Shield className="h-4 w-4 text-primary" />
-                    Password requirements
-                  </div>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> At least 8 characters</div>
-                    <div className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Mix of letters and numbers</div>
-                    <div className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> At least one special character</div>
-                  </div>
-                </div>
-
-                <label className="flex items-start gap-3 text-sm text-muted-foreground cursor-pointer">
-                  <input type="checkbox" className="mt-1 h-4 w-4 rounded border-white/20 bg-black/20 text-primary focus:ring-primary focus:ring-offset-0" required />
-                  <span>
-                    I agree to the <Link href="/terms" className="font-semibold text-primary hover:text-primary/80 transition-colors">Terms of Service</Link> and <Link href="/privacy" className="font-semibold text-primary hover:text-primary/80 transition-colors">Privacy Policy</Link>.
-                  </span>
-                </label>
-
-                <Button type="submit" disabled={loading} className="btn-gradient border-0 h-12 w-full rounded-xl text-base font-bold shadow-xl transition-all hover:scale-[1.02]">
-                  {loading ? "Creating account..." : (
-                    <span className="inline-flex items-center">
-                      Create account
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                  <label className="flex items-start gap-3 text-sm text-muted-foreground cursor-pointer">
+                    <input type="checkbox" className="mt-1 h-4 w-4 rounded border-white/20 bg-black/20 text-primary focus:ring-primary focus:ring-offset-0" required />
+                    <span>
+                      I agree to the <Link href="/terms" className="font-semibold text-primary hover:text-primary/80 transition-colors">Terms of Service</Link> and <Link href="/privacy" className="font-semibold text-primary hover:text-primary/80 transition-colors">Privacy Policy</Link>.
                     </span>
-                  )}
-                </Button>
-              </form>
+                  </label>
+
+                  <Button type="submit" disabled={loading} className="btn-gradient border-0 h-12 w-full rounded-xl text-base font-bold shadow-xl transition-all hover:scale-[1.02]">
+                    {loading ? "Creating account..." : (
+                      <span className="inline-flex items-center">
+                        Create account
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </span>
+                    )}
+                  </Button>
+                </form>
+              )}
             </div>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
