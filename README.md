@@ -1,4 +1,4 @@
-# Lmohh - Enhanced Property Management Frontend
+# batima-gest - Enhanced Property Management Frontend
 
 A modern, feature-rich property management application built with Next.js 14, TypeScript, and Tailwind CSS. This is a significantly improved version of the Batima-Gest frontend with enhanced UX, better animations, and more comprehensive features.
 
@@ -275,5 +275,6 @@ This project is licensed under the MIT License.
 
 ---
 
-**Note**: This is a significantly enhanced version of Batima-Gest with better UX, modern design patterns, and comprehensive features. The codebase is production-ready and follows best practices for Next.js applications.#   B u i l d   t r i g g e r  
+**Note**: This is a significantly enhanced version of Batima-Gest with better UX, modern design patterns, and comprehensive features. The codebase is production-ready and follows best practices for Next.js applications.#   B u i l d   t r i g g e r 
+ 
  

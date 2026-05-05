@@ -14,6 +14,8 @@ import {
   Building2,
   User,
   Trash2,
+  FileText,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -60,9 +62,12 @@ export default function DashboardPage() {
     }
 
     // Fetch stats
-    const [announcementsRes, urgentRes] = await Promise.all([
+    const [announcementsRes, urgentRes, maintenanceTotalRes, maintenanceInProgressRes, documentsRes] = await Promise.all([
       supabase.from('announcements').select('id', { count: 'exact', head: true }),
       supabase.from('announcements').select('id', { count: 'exact', head: true }).eq('urgent', true),
+      supabase.from('maintenance_requests').select('id', { count: 'exact', head: true }),
+      supabase.from('maintenance_requests').select('id', { count: 'exact', head: true }).eq('status', 'in progress'),
+      supabase.from('documents').select('id', { count: 'exact', head: true }),
     ]);
 
     setStats({
@@ -70,8 +75,13 @@ export default function DashboardPage() {
         total: announcementsRes.count ?? 0, 
         urgent: urgentRes.count ?? 0 
       },
-      maintenance: { total: 0, inProgress: 0 },
-      documents: { total: 12 },
+      maintenance: { 
+        total: maintenanceTotalRes.count ?? 0, 
+        inProgress: maintenanceInProgressRes.count ?? 0 
+      },
+      documents: { 
+        total: documentsRes.count ?? 0 
+      },
     });
     
     // Fetch real recent announcements
@@ -137,13 +147,13 @@ export default function DashboardPage() {
             },
             {
               title: "Maintenance",
-              value: stats.maintenance.total,
+              value: loading ? "…" : stats.maintenance.total,
               subtitle: `${stats.maintenance.inProgress} in progress`,
               color: "bg-amber-500",
             },
             {
               title: "Documents",
-              value: stats.documents.total,
+              value: loading ? "…" : stats.documents.total,
               subtitle: "Available",
               color: "bg-blue-500",
             },
@@ -163,7 +173,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-muted-foreground/80 mt-2 font-medium bg-white/5 inline-flex px-2 py-1 rounded-full">{stat.subtitle}</p>
                     </div>
                     <div className={`h-14 w-14 rounded-2xl ${stat.color} bg-opacity-20 flex items-center justify-center border border-white/10 shadow-lg`}>
-                      <div className={`h-7 w-7 rounded-full bg-white/40 backdrop-blur-md`} />
+                       <div className={`h-7 w-7 rounded-full bg-white/40 backdrop-blur-md`} />
                     </div>
                   </div>
                 </CardContent>
@@ -191,7 +201,10 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="space-y-4 pt-6">
                 {loading ? (
-                   <div className="text-center py-8 text-white/20">Loading...</div>
+                   <div className="text-center py-8 text-white/20">
+                     <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 opacity-20" />
+                     Loading announcements...
+                   </div>
                 ) : recentAnnouncements.length === 0 ? (
                    <div className="text-center py-8 text-white/20">No announcements yet.</div>
                 ) : recentAnnouncements.map((announcement) => (
@@ -239,7 +252,7 @@ export default function DashboardPage() {
             </Card>
           </motion.div>
 
-          {/* Maintenance (Static for now) */}
+          {/* Maintenance (Linked to live data) */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -247,16 +260,36 @@ export default function DashboardPage() {
             <Card className="glass-effect border-white/10 h-full">
               <CardHeader className="border-b border-white/5 pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl font-semibold text-white">Maintenance Requests</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-white">Maintenance Overview</CardTitle>
                   <Button variant="ghost" size="sm" onClick={() => router.push('/maintenance')} className="text-primary hover:text-primary/80 hover:bg-white/5 transition-colors">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4 pt-6 text-center py-12 text-white/20">
-                 <Wrench className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                 <p>Maintenance tracking system coming soon.</p>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
+                    <p className="text-2xl font-bold text-white">{loading ? "…" : stats.maintenance.total}</p>
+                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider font-bold">Total Requests</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/10 text-center">
+                    <p className="text-2xl font-bold text-amber-400">{loading ? "…" : stats.maintenance.inProgress}</p>
+                    <p className="text-xs text-amber-400/60 mt-1 uppercase tracking-wider font-bold">In Progress</p>
+                  </div>
+                </div>
+                <div className="mt-6 p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                    <Wrench className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-white">New Request?</p>
+                    <p className="text-xs text-muted-foreground">Submit a ticket for building maintenance.</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => router.push('/maintenance')} className="border-primary/20 text-primary hover:bg-primary/10 h-8">
+                    Create
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

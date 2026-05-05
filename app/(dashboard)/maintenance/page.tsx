@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Wrench, Calendar, Clock, AlertTriangle, CheckCircle, Building2, X, ArrowLeft, Plus, Loader2 } from "lucide-react"
+import { Wrench, Calendar, Clock, AlertTriangle, CheckCircle, Building2, X, ArrowLeft, Plus, Loader2, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/lib/supabase"
@@ -34,6 +34,7 @@ export default function MaintenancePage() {
   const [priorityFilter, setPriorityFilter] = useState("All")
   const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null)
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   
   // New Request Form
   const [newRequest, setNewRequest] = useState({
@@ -44,8 +45,23 @@ export default function MaintenancePage() {
   })
 
   useEffect(() => {
+    checkRole()
     fetchRequests()
   }, [])
+
+  const checkRole = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      if (
+        profile?.role === 'Admin' || 
+        user.email?.toLowerCase().includes('admin') || 
+        user.email?.toLowerCase() === 'batmant488@gmail.com'
+      ) {
+        setIsAdmin(true)
+      }
+    }
+  }
 
   const fetchRequests = async () => {
     setLoading(true)
@@ -79,6 +95,28 @@ export default function MaintenancePage() {
       setIsNewRequestOpen(false)
       setNewRequest({ title: "", description: "", priority: "Medium", unit: "" })
       fetchRequests()
+    }
+  }
+
+  const handleDeleteRequest = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    if (!confirm("Are you sure you want to delete this maintenance request?")) return
+
+    const { error } = await supabase.from('maintenance_requests').delete().eq('id', id)
+    
+    if (!error) {
+      toast({
+        title: "Request deleted",
+        description: "The maintenance request has been removed.",
+      })
+      if (selectedRequest?.id === id) setSelectedRequest(null)
+      fetchRequests()
+    } else {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      })
     }
   }
 
@@ -226,6 +264,16 @@ export default function MaintenancePage() {
                                 <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border", getPriorityColor(request.priority))}>
                                   {request.priority}
                                 </span>
+                                {isAdmin && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => handleDeleteRequest(e, request.id)}
+                                    className="h-8 w-8 text-red-500 hover:bg-red-500/10 ml-auto"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                               <div className="flex items-center gap-4 text-xs font-semibold text-white/30">
                                 <div className="flex items-center gap-1.5">
@@ -265,14 +313,26 @@ export default function MaintenancePage() {
             animate={{ opacity: 1, x: 0 }}
             className="max-w-4xl mx-auto"
           >
-            <Button
-              variant="ghost"
-              onClick={() => setSelectedRequest(null)}
-              className="mb-8 text-white/60 hover:text-white hover:bg-white/5 h-12 px-6 rounded-xl font-bold"
-            >
-              <ArrowLeft className="mr-3 h-5 w-5" />
-              Back to List
-            </Button>
+            <div className="flex items-center justify-between mb-8">
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedRequest(null)}
+                className="text-white/60 hover:text-white hover:bg-white/5 h-12 px-6 rounded-xl font-bold"
+              >
+                <ArrowLeft className="mr-3 h-5 w-5" />
+                Back to List
+              </Button>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  onClick={(e) => handleDeleteRequest(e, selectedRequest.id)}
+                  className="text-red-500 hover:bg-red-500/10 h-12 px-6 rounded-xl font-bold"
+                >
+                  <Trash2 className="mr-3 h-5 w-5" />
+                  Delete Request
+                </Button>
+              )}
+            </div>
 
             <Card className="glass-effect border-white/10 overflow-hidden">
               <div className={cn("h-2 w-full", getPriorityColor(selectedRequest.priority).split(' ')[0])} />
