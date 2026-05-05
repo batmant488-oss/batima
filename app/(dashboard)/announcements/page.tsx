@@ -234,6 +234,16 @@ export default function AnnouncementsPage() {
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-slate-900">{announcement.title}</h3>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteAnnouncement(announcement.id)}
+                              className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 ml-auto"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                           {announcement.urgent && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
                               <AlertCircle className="inline mr-1 h-3 w-3" />
@@ -286,16 +296,6 @@ export default function AnnouncementsPage() {
                         <Share2 className="mr-1 h-3 w-3" />
                         Share
                       </Button>
-                      {isAdmin && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteAnnouncement(announcement.id)}
-                          className="text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700">
-                          <Trash2 className="mr-1 h-3 w-3" />
-                          Delete
-                        </Button>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
