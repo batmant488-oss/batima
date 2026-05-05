@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Megaphone, Calendar, Clock, AlertCircle, CheckCircle, Plus, Share2, Trash2 } from "lucide-react"
+import { Megaphone, Calendar, Clock, AlertCircle, CheckCircle, Plus, Share2, Trash2, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/components/ui/use-toast"
@@ -22,8 +22,10 @@ export default function AnnouncementsPage() {
   const [showUrgentOnly, setShowUrgentOnly] = useState(false)
   const [readAnnouncements, setReadAnnouncements] = useState<Set<string>>(new Set())
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", content: "", urgent: false, category: "Maintenance" })
+  const [editingAnnouncement, setEditingAnnouncement] = useState<any>(null)
 
   useEffect(() => {
     checkRole()
@@ -62,6 +64,41 @@ export default function AnnouncementsPage() {
     } else {
       toast({
         title: "Error",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleEditClick = (announcement: any) => {
+    setEditingAnnouncement({ ...announcement })
+    setIsEditOpen(true)
+  }
+
+  const handleUpdateAnnouncement = async () => {
+    if (!editingAnnouncement) return
+
+    const { error } = await supabase
+      .from('announcements')
+      .update({
+        title: editingAnnouncement.title,
+        content: editingAnnouncement.content,
+        category: editingAnnouncement.category,
+        urgent: editingAnnouncement.urgent,
+      })
+      .eq('id', editingAnnouncement.id)
+
+    if (!error) {
+      setIsEditOpen(false)
+      setEditingAnnouncement(null)
+      toast({
+        title: "Annonce mise à jour",
+        description: "Les modifications ont été enregistrées.",
+      })
+      fetchAnnouncements()
+    } else {
+      toast({
+        title: "Erreur",
         description: error.message,
         variant: "destructive",
       })
@@ -235,14 +272,24 @@ export default function AnnouncementsPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-slate-900">{announcement.title}</h3>
                           {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteAnnouncement(announcement.id)}
-                              className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600 ml-auto"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1 ml-auto">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditClick(announcement)}
+                                className="h-8 w-8 text-slate-500 hover:bg-slate-100 hover:text-slate-600"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteAnnouncement(announcement.id)}
+                                className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           )}
                           {announcement.urgent && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
@@ -304,6 +351,66 @@ export default function AnnouncementsPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier l&apos;annonce</DialogTitle>
+          </DialogHeader>
+          {editingAnnouncement && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Titre</Label>
+                <Input 
+                  value={editingAnnouncement.title} 
+                  onChange={e => setEditingAnnouncement({...editingAnnouncement, title: e.target.value})} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Contenu</Label>
+                <Textarea 
+                  value={editingAnnouncement.content} 
+                  onChange={e => setEditingAnnouncement({...editingAnnouncement, content: e.target.value})} 
+                  className="min-h-[150px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Catégorie</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {categories.filter(c => c !== "All").map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setEditingAnnouncement({...editingAnnouncement, category: c})}
+                      className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                        editingAnnouncement.category === c
+                          ? "bg-primary/20 border-primary/50 text-primary"
+                          : "bg-black/20 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 pt-2">
+                <input 
+                  type="checkbox" 
+                  id="edit-urgent" 
+                  checked={editingAnnouncement.urgent} 
+                  onChange={e => setEditingAnnouncement({...editingAnnouncement, urgent: e.target.checked})} 
+                />
+                <Label htmlFor="edit-urgent">Marquer comme urgent</Label>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>Annuler</Button>
+            <Button onClick={handleUpdateAnnouncement} className="btn-gradient border-0">Enregistrer les modifications</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
