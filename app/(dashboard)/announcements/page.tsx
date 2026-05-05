@@ -11,10 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Megaphone, Calendar, Clock, AlertCircle, CheckCircle, Plus, Share2, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
+import { useToast } from "@/components/ui/use-toast"
 
 const categories = ["All", "Maintenance", "Utilities", "Community", "Facilities"]
 
 export default function AnnouncementsPage() {
+  const { toast } = useToast()
   const [announcements, setAnnouncements] = useState<any[]>([])
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [showUrgentOnly, setShowUrgentOnly] = useState(false)
