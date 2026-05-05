@@ -98,6 +98,28 @@ export default function MaintenancePage() {
     }
   }
 
+  const handleUpdateStatus = async (id: string, status: string) => {
+    const { error } = await supabase
+      .from('maintenance_requests')
+      .update({ status })
+      .eq('id', id)
+    
+    if (!error) {
+      toast({
+        title: "Status updated",
+        description: `Request marked as ${status}.`,
+      })
+      if (selectedRequest) setSelectedRequest({ ...selectedRequest, status })
+      fetchRequests()
+    } else {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleDeleteRequest = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     if (!confirm("Is this job done? The request will be removed from the list.")) return
@@ -264,7 +286,7 @@ export default function MaintenancePage() {
                                 <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border", getPriorityColor(request.priority))}>
                                   {request.priority}
                                 </span>
-                                {isAdmin && (
+                                {isAdmin && request.status.toLowerCase() === 'resolved' && (
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -323,7 +345,7 @@ export default function MaintenancePage() {
                 <ArrowLeft className="mr-3 h-5 w-5" />
                 Back to List
               </Button>
-              {isAdmin && (
+              {isAdmin && selectedRequest.status.toLowerCase() === 'resolved' && (
                 <Button
                   onClick={(e) => handleDeleteRequest(e, selectedRequest.id)}
                   className="bg-green-600 hover:bg-green-700 text-white h-12 px-8 rounded-xl font-bold shadow-lg shadow-green-500/20"
@@ -381,14 +403,33 @@ export default function MaintenancePage() {
                   </div>
                 </div>
 
-                {selectedRequest.notes && (
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-bold text-white flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-400" />
-                      Resolution Notes
-                    </h4>
-                    <div className="p-6 rounded-2xl bg-green-500/5 border border-green-500/20 leading-relaxed text-green-400/80">
-                      {selectedRequest.notes}
+                {isAdmin && (
+                  <div className="space-y-4 pt-6 border-t border-white/5">
+                    <h4 className="text-sm font-bold text-white/40 uppercase tracking-widest">Admin Actions</h4>
+                    <div className="flex flex-wrap gap-3">
+                      {selectedRequest.status.toLowerCase() !== 'in progress' && selectedRequest.status.toLowerCase() !== 'resolved' && (
+                        <Button
+                          onClick={() => handleUpdateStatus(selectedRequest.id, 'In Progress')}
+                          className="bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600/30 font-bold"
+                        >
+                          <Clock className="mr-2 h-4 w-4" />
+                          Start Work
+                        </Button>
+                      )}
+                      {selectedRequest.status.toLowerCase() !== 'resolved' && (
+                        <Button
+                          onClick={() => handleUpdateStatus(selectedRequest.id, 'Resolved')}
+                          className="bg-green-600/20 text-green-400 border border-green-600/30 hover:bg-green-600/30 font-bold"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Mark as Resolved
+                        </Button>
+                      )}
+                      {selectedRequest.status.toLowerCase() === 'resolved' && (
+                        <p className="text-sm text-green-400/60 italic">
+                          Ticket is resolved. You can now mark it as "Job Done" to remove it.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
