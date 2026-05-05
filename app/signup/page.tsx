@@ -79,7 +79,7 @@ export default function SignupPage() {
       email: formData.email,
       password: formData.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: `https://batima-esc3jzyqk-batmant488-oss-projects.vercel.app/login`,
         data: {
           name: formData.name,
           building: formData.building,
