@@ -100,14 +100,14 @@ export default function MaintenancePage() {
 
   const handleDeleteRequest = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    if (!confirm("Are you sure you want to delete this maintenance request?")) return
+    if (!confirm("Is this job done? The request will be removed from the list.")) return
 
     const { error } = await supabase.from('maintenance_requests').delete().eq('id', id)
     
     if (!error) {
       toast({
-        title: "Request deleted",
-        description: "The maintenance request has been removed.",
+        title: "Success",
+        description: "Job marked as done and ticket removed.",
       })
       if (selectedRequest?.id === id) setSelectedRequest(null)
       fetchRequests()
@@ -266,12 +266,13 @@ export default function MaintenancePage() {
                                 </span>
                                 {isAdmin && (
                                   <Button
-                                    variant="ghost"
-                                    size="icon"
+                                    variant="outline"
+                                    size="sm"
                                     onClick={(e) => handleDeleteRequest(e, request.id)}
-                                    className="h-8 w-8 text-red-500 hover:bg-red-500/10 ml-auto"
+                                    className="border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 ml-auto font-bold text-[10px] uppercase tracking-wider h-8 px-3 rounded-lg"
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
+                                    Job Done
                                   </Button>
                                 )}
                               </div>
@@ -324,12 +325,11 @@ export default function MaintenancePage() {
               </Button>
               {isAdmin && (
                 <Button
-                  variant="ghost"
                   onClick={(e) => handleDeleteRequest(e, selectedRequest.id)}
-                  className="text-red-500 hover:bg-red-500/10 h-12 px-6 rounded-xl font-bold"
+                  className="bg-green-600 hover:bg-green-700 text-white h-12 px-8 rounded-xl font-bold shadow-lg shadow-green-500/20"
                 >
-                  <Trash2 className="mr-3 h-5 w-5" />
-                  Delete Request
+                  <CheckCircle className="mr-3 h-5 w-5" />
+                  Mark as Job Done
                 </Button>
               )}
             </div>
