@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Building2,
   User,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [recentAnnouncements, setRecentAnnouncements] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -49,28 +51,28 @@ export default function DashboardPage() {
         .single();
       if (profileData) {
         setProfile(profileData);
+        if (profileData.role === 'Admin' || user.email?.toLowerCase() === 'batmant488@gmail.com' || user.email?.toLowerCase().includes('admin')) {
+          setIsAdmin(true);
+        }
+      } else if (user.email?.toLowerCase() === 'batmant488@gmail.com' || user.email?.toLowerCase().includes('admin')) {
+        setIsAdmin(true);
       }
     }
 
     // Fetch stats
-    const [announcementsRes, urgentRes, maintenanceRes] = await Promise.all([
+    const [announcementsRes, urgentRes] = await Promise.all([
       supabase.from('announcements').select('id', { count: 'exact', head: true }),
       supabase.from('announcements').select('id', { count: 'exact', head: true }).eq('urgent', true),
-      supabase.from('announcements').select('*').order('date', { ascending: false }).limit(3),
     ]);
 
-    // For now we don't have a maintenance table yet, so we keep mock or 0
-    // But we fetch real announcements
     setStats({
       announcements: { 
         total: announcementsRes.count ?? 0, 
         urgent: urgentRes.count ?? 0 
       },
-      maintenance: { total: 0, inProgress: 0 }, // Placeholder until maintenance table exists
-      documents: { total: 12 }, // Static for now
+      maintenance: { total: 0, inProgress: 0 },
+      documents: { total: 12 },
     });
-
-    setRecentAnnouncements(announcementsRes.data || []);
     
     // Fetch real recent announcements
     const { data: latestAnnouncements } = await supabase
@@ -84,6 +86,16 @@ export default function DashboardPage() {
     }
 
     setLoading(false);
+  };
+
+  const handleDeleteAnnouncement = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this announcement?")) return;
+
+    const { error } = await supabase.from('announcements').delete().eq('id', id);
+    if (!error) {
+      fetchDashboardData();
+    }
   };
 
   return (
@@ -210,6 +222,16 @@ export default function DashboardPage() {
                           </p>
                         </div>
                       </div>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => handleDeleteAnnouncement(e, announcement.id)}
+                          className="text-destructive hover:bg-destructive/10 -mt-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
