@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Megaphone, Calendar, Clock, AlertCircle, CheckCircle, Plus, Share2 } from "lucide-react"
+import { Megaphone, Calendar, Clock, AlertCircle, CheckCircle, Plus, Share2, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 
@@ -20,15 +20,46 @@ export default function AnnouncementsPage() {
   const [showUrgentOnly, setShowUrgentOnly] = useState(false)
   const [readAnnouncements, setReadAnnouncements] = useState<Set<string>>(new Set())
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [newAnnouncement, setNewAnnouncement] = useState({ title: "", content: "", urgent: false, category: "Maintenance" })
 
   useEffect(() => {
+    checkRole()
     fetchAnnouncements()
   }, [])
+
+  const checkRole = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      if (profile?.role === 'Admin' || user.email?.toLowerCase().includes('admin')) {
+        setIsAdmin(true)
+      }
+    }
+  }
 
   const fetchAnnouncements = async () => {
     const { data, error } = await supabase.from('announcements').select('*').order('date', { ascending: false })
     if (data) setAnnouncements(data)
+  }
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this announcement?")) return
+
+    const { error } = await supabase.from('announcements').delete().eq('id', id)
+    if (!error) {
+      toast({
+        title: "Announcement deleted",
+        description: "The announcement has been removed successfully.",
+      })
+      fetchAnnouncements()
+    } else {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
   }
 
   const handleNewAnnouncement = async () => {
@@ -118,55 +149,57 @@ export default function AnnouncementsPage() {
           <p className="text-sm text-slate-600">
             Showing <span className="font-semibold">{filteredAnnouncements.length}</span> of <span className="font-semibold">{announcements.length}</span> announcements
           </p>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <Plus className="mr-2 h-4 w-4" />
-                New Announcement
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Announcement</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Title</Label>
-                  <Input value={newAnnouncement.title} onChange={e => setNewAnnouncement({...newAnnouncement, title: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Content</Label>
-                  <Textarea value={newAnnouncement.content} onChange={e => setNewAnnouncement({...newAnnouncement, content: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {categories.filter(c => c !== "All").map(c => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setNewAnnouncement({...newAnnouncement, category: c})}
-                        className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
-                          newAnnouncement.category === c
-                            ? "bg-primary/20 border-primary/50 text-primary"
-                            : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    ))}
+          {isAdmin && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-emerald-600 hover:bg-emerald-700">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Announcement
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Announcement</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Title</Label>
+                    <Input value={newAnnouncement.title} onChange={e => setNewAnnouncement({...newAnnouncement, title: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Content</Label>
+                    <Textarea value={newAnnouncement.content} onChange={e => setNewAnnouncement({...newAnnouncement, content: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {categories.filter(c => c !== "All").map(c => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setNewAnnouncement({...newAnnouncement, category: c})}
+                          className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                            newAnnouncement.category === c
+                              ? "bg-primary/20 border-primary/50 text-primary"
+                              : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" id="urgent" checked={newAnnouncement.urgent} onChange={e => setNewAnnouncement({...newAnnouncement, urgent: e.target.checked})} />
+                    <Label htmlFor="urgent">Mark as urgent</Label>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input type="checkbox" id="urgent" checked={newAnnouncement.urgent} onChange={e => setNewAnnouncement({...newAnnouncement, urgent: e.target.checked})} />
-                  <Label htmlFor="urgent">Mark as urgent</Label>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleNewAnnouncement}>Publish Announcement</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button onClick={handleNewAnnouncement}>Publish Announcement</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Announcements Grid */}
@@ -247,6 +280,16 @@ export default function AnnouncementsPage() {
                         <Share2 className="mr-1 h-3 w-3" />
                         Share
                       </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteAnnouncement(announcement.id)}
+                          className="text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700">
+                          <Trash2 className="mr-1 h-3 w-3" />
+                          Delete
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
