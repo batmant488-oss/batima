@@ -223,7 +223,7 @@ export default function SignupPage() {
                       Aller à la connexion
                     </Button>
                     <p className="text-sm text-muted-foreground">
-                      Vous n'avez rien reçu ?{" "}
+                      Vous n&apos;avez rien reçu ?{" "}
                       <button 
                         onClick={handleResend} 
                         disabled={loading}

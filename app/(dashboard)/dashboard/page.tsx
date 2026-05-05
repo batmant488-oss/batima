@@ -106,7 +106,7 @@ export default function DashboardPage() {
             transition={{ delay: 0.1 }}
             className="text-muted-foreground text-lg"
           >
-            {profile?.unit ? `Building details for ${profile.unit}` : "Here's what's happening with your building"}
+            {profile?.unit ? `Building details for ${profile.unit}` : "Here&apos;s what&apos;s happening with your building"}
           </motion.p>
         </div>
 
